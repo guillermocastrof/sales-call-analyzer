@@ -1,5 +1,9 @@
 node_modules/
 *.db
 .env
+.env.local
 .DS_Store
 uploads/
+.next/
+tsconfig.tsbuildinfo
+
