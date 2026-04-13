@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sales Call Analyzer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container navbar-inner">
+    <div class="navbar-brand">Sales<span>Call</span></div>
+    <div id="analyzing-notice">
+      <div class="mini-spin"></div>
+      Analyzing calls…
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- Stats Bar -->
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat-card">
+      <div class="stat-label">Total Calls</div>
+      <div class="stat-value" id="stat-total">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Score</div>
+      <div id="stat-score" class="stat-value">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Talk Ratio</div>
+      <div class="stat-value" id="stat-talk">—</div>
+      <div class="stat-sub">salesperson</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Close Prob</div>
+      <div class="stat-value" id="stat-close">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Sentiment</div>
+      <div class="sentiment-row" id="stat-sentiment">—</div>
+    </div>
+  </div>
+
+  <!-- Upload Panel -->
+  <div class="upload-panel">
+    <div class="upload-header" onclick="toggleUpload()">
+      <span class="upload-title">+ Add New Call</span>
+      <svg class="upload-chevron" id="upload-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="upload-body" id="upload-body">
+      <div class="upload-tabs">
+        <button class="upload-tab active" onclick="switchTab('paste', this)">Paste Transcript</button>
+        <button class="upload-tab" onclick="switchTab('file', this)">Upload .txt File</button>
+      </div>
+
+      <!-- Paste tab -->
+      <div id="tab-paste">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Call Title</label>
+            <input type="text" id="paste-title" placeholder="e.g. Acme Corp Discovery Call" />
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="paste-date" />
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Transcript</label>
+          <textarea id="paste-transcript" placeholder="Paste your call transcript here…"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="submitPaste()">Analyze Call</button>
+      </div>
+
+      <!-- File tab -->
+      <div id="tab-file" style="display:none">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Call Title (optional)</label>
+            <input type="text" id="file-title" placeholder="Defaults to filename" />
+          </div>
+          <div class="form-group">
+            <label>Date (optional)</label>
+            <input type="date" id="file-date" />
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Transcript File (.txt)</label>
+          <input type="file" id="file-input" accept=".txt" />
+        </div>
+        <button class="btn btn-primary" onclick="submitFile()">Upload & Analyze</button>
+      </div>
+
+      <div class="upload-status" id="upload-status"></div>
+    </div>
+  </div>
+
+  <!-- Calls Table -->
+  <div class="section-header">
+    <div class="section-title">Calls</div>
+  </div>
+
+  <div class="card" style="padding:0; overflow:hidden">
+    <div class="table-wrap">
+      <table id="calls-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Date</th>
+            <th>Score</th>
+            <th>Sentiment</th>
+            <th>Close Prob</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="calls-tbody">
+          <tr><td colspan="7" class="loading"><div class="spinner"></div>Loading calls…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="height:40px"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

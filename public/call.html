@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Call Detail — Sales Call Analyzer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container navbar-inner">
+    <a class="navbar-brand" href="/">Sales<span>Call</span></a>
+  </div>
+</nav>
+
+<div class="container" id="main-content">
+  <div class="loading" style="padding:80px 0">
+    <div class="spinner"></div>
+    Loading call…
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// Shared utilities
+function scoreClass(s) {
+  if (s >= 80) return 'score-green';
+  if (s >= 50) return 'score-yellow';
+  return 'score-red';
+}
+function scoreColor(s) {
+  if (s >= 80) return 'var(--green)';
+  if (s >= 50) return 'var(--yellow)';
+  return 'var(--red)';
+}
+function sentimentClass(s) {
+  if (s === 'positive') return 'badge-positive';
+  if (s === 'negative') return 'badge-negative';
+  return 'badge-neutral';
+}
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 2500);
+}
+
+async function loadCall() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  if (!id) { document.getElementById('main-content').innerHTML = '<p style="padding:40px;color:var(--muted)">No call ID provided.</p>'; return; }
+
+  const res = await fetch(`/api/calls/${id}`);
+  if (!res.ok) { document.getElementById('main-content').innerHTML = '<p style="padding:40px;color:var(--red)">Call not found.</p>'; return; }
+
+  const call = await res.json();
+  const a = call.analysis || {};
+
+  const score = a.overall_score ?? null;
+  const closeProb = a.close_probability ?? null;
+  const talkRatio = a.talk_ratio ?? null;
+
+  document.title = `${call.title} — Sales Call Analyzer`;
+
+  const makeList = (items, icon) => {
+    if (!items || !items.length) return '<p style="color:var(--muted);font-size:13px">None identified</p>';
+    return items.map(item => `
+      <div class="list-item">
+        <span class="list-icon">${icon}</span>
+        <span>${esc(item)}</span>
+      </div>
+    `).join('');
+  };
+
+  const callClientRatio = talkRatio !== null ? (100 - talkRatio) : null;
+
+  document.getElementById('main-content').innerHTML = `
+    <a class="back-link" href="/">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to Dashboard
+    </a>
+
+    <div class="call-header">
+      <div class="call-title-group">
+        <h1>${esc(call.title)}</h1>
+        <div class="call-meta">
+          ${call.date ? `<span>${call.date}</span> &middot; ` : ''}
+          <span>Analyzed ${call.analyzed_at ? new Date(call.analyzed_at).toLocaleString() : 'N/A'}</span>
+        </div>
+      </div>
+      ${score !== null ? `
+        <div class="card score-hero" style="min-width:140px">
+          <div class="score-hero-number" style="color:${scoreColor(score)}">${score}</div>
+          <div class="score-hero-label">Overall Score</div>
+        </div>
+      ` : ''}
+    </div>
+
+    ${call.status === 'analyzing' ? `
+      <div class="card" style="margin-bottom:16px;color:var(--yellow);text-align:center;padding:24px">
+        <div class="spinner" style="border-top-color:var(--yellow)"></div>
+        <p style="margin-top:12px">Analysis in progress…</p>
+      </div>
+    ` : ''}
+
+    ${call.status === 'error' ? `
+      <div class="card" style="margin-bottom:16px;color:var(--red);padding:16px">
+        Error: ${esc(a.error || 'Unknown error')}
+      </div>
+    ` : ''}
+
+    ${a.summary ? `
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Summary</div>
+        <p class="summary-text">${esc(a.summary)}</p>
+      </div>
+    ` : ''}
+
+    <div class="two-col">
+      <!-- Left column -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        <div class="card">
+          <div class="card-title">Strengths</div>
+          ${makeList(a.strengths, '✅')}
+        </div>
+
+        <div class="card">
+          <div class="card-title">Weaknesses</div>
+          ${makeList(a.weaknesses, '❌')}
+        </div>
+
+        <div class="card">
+          <div class="card-title">Coaching Tips</div>
+          ${makeList(a.coaching_tips, '💡')}
+        </div>
+
+      </div>
+
+      <!-- Right column -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        ${closeProb !== null ? `
+          <div class="card">
+            <div class="card-title">Close Probability</div>
+            <div class="big-stat" style="color:${scoreColor(closeProb)}">${closeProb}<span style="font-size:28px;font-weight:400">%</span></div>
+            <div class="big-stat-label">likelihood of closing</div>
+          </div>
+        ` : ''}
+
+        ${talkRatio !== null ? `
+          <div class="card">
+            <div class="card-title">Talk Ratio</div>
+            <div class="talk-bar-wrap">
+              <div class="talk-bar-labels">
+                <span>Salesperson</span>
+                <span>Client</span>
+              </div>
+              <div class="talk-bar-bg">
+                <div class="talk-bar-fill" style="width:${talkRatio}%"></div>
+              </div>
+              <div class="talk-bar-pct">
+                <span style="color:var(--accent)">${talkRatio}%</span>
+                <span style="color:var(--muted)">${callClientRatio}%</span>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        ${a.client_sentiment ? `
+          <div class="card">
+            <div class="card-title">Client Sentiment</div>
+            <div style="margin-top:8px">
+              <span class="badge ${sentimentClass(a.client_sentiment)}" style="font-size:16px;padding:6px 18px">
+                ${a.client_sentiment.charAt(0).toUpperCase() + a.client_sentiment.slice(1)}
+              </span>
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="card">
+          <div class="card-title">Objections Raised</div>
+          ${makeList(a.objections_raised, '⚡')}
+        </div>
+
+        <div class="card">
+          <div class="card-title">Client Pain Points</div>
+          ${makeList(a.client_pain_points, '🎯')}
+        </div>
+
+        <div class="card">
+          <div class="card-title">Next Steps</div>
+          ${makeList(a.next_steps, '→')}
+        </div>
+
+      </div>
+    </div>
+
+    ${a.key_topics && a.key_topics.length ? `
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Key Topics</div>
+        <div class="tags-wrap" style="margin-top:8px">
+          ${a.key_topics.map(t => `<span class="tag">${esc(t)}</span>`).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    <div class="card" style="margin-bottom:40px">
+      <div class="collapsible-header" onclick="toggleTranscript()">
+        <h3>Full Transcript</h3>
+        <svg id="transcript-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="collapsible-body" id="transcript-body">
+        <pre class="transcript-text">${esc(call.transcript)}</pre>
+      </div>
+    </div>
+  `;
+}
+
+function toggleTranscript() {
+  const body = document.getElementById('transcript-body');
+  const chevron = document.getElementById('transcript-chevron');
+  body.classList.toggle('open');
+  chevron.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
+}
+
+loadCall();
+</script>
+</body>
+</html>
