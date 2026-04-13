@@ -7,3 +7,4 @@ uploads/
 .next/
 tsconfig.tsbuildinfo
 
+.vercel
